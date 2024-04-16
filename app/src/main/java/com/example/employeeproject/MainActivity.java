@@ -1,102 +1,85 @@
 package com.example.employeeproject;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
-
-    private TextView emplIdText_View;
-    private TextView emplNameText_View;
-    private TextView emplSalaryText_View;
-    private TextView Taxt_View;
-    private Button NextButton;
-    private Button PrevButton;
-    private Button CalculateTax;
-    private int currentIndex=0;
-    public static String TAG="Employee Project";
-    public static String KEY_INDEX = "index";
-
-    public static ArrayList<Employee> all_employee = new ArrayList<>();
-    Employee employee1 = new Employee(1,"Rafael",24);
-    Employee employee2 = new Employee(2,"Eduardo",14);
-    Employee employee3 = new Employee(3,"James",10);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        all_employee.add(employee1);
-        all_employee.add(employee2);
-        all_employee.add(employee3);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
-        if(savedInstanceState!=null)
+        //Use FragmentManager to add mainFragment to fragment to container
+
+        FragmentManager fn = getSupportFragmentManager();
+        Fragment fragment = fn.findFragmentById(R.id.fragment_container);
+        if(fragment==null)
         {
-            currentIndex=savedInstanceState.getInt(KEY_INDEX);
+            fragment = new MainFragment();
+            fn.beginTransaction()
+                    .add(R.id.fragment_container,fragment)
+                    .commit();
         }
 
-        //Get view of empl_id
-        emplIdText_View = (TextView) findViewById(R.id.emp_id_text_view);
-        emplIdText_View.setText(Integer.toString(all_employee.get(currentIndex).getEmp_id()));
-
-        //Get view of empl_name
-        emplNameText_View = (TextView) findViewById(R.id.emp_name_text_view);
-        emplNameText_View.setText(all_employee.get(currentIndex).getEmp_name());
-
-        //Get view of empl_salary
-        emplSalaryText_View = (TextView) findViewById(R.id.emp_salary_text_view);
-        emplSalaryText_View.setText(Double.toString(all_employee.get(currentIndex).getEmp_salary()));
-
-        //Get view of tax
-        Taxt_View= (TextView) findViewById(R.id.tax_text_view);
-
-        //Get view Next Button
-        NextButton = (Button) findViewById(R.id.nextEmployeeButton);
-        NextButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                currentIndex= (currentIndex+1)%all_employee.size();
-                emplIdText_View.setText(Integer.toString(all_employee.get(currentIndex).getEmp_id()));
-                emplNameText_View.setText(all_employee.get(currentIndex).getEmp_name());
-                emplSalaryText_View.setText(Double.toString(all_employee.get(currentIndex).getEmp_salary()));
-            }
-        });
-
-        //Get the view of prev button
-        PrevButton=(Button) findViewById(R.id.prevEmployeeButton);
-        PrevButton.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            currentIndex = (currentIndex - 1 + all_employee.size()) % all_employee.size();
-            emplIdText_View.setText(Integer.toString(all_employee.get(currentIndex).getEmp_id()));
-            emplNameText_View.setText(all_employee.get(currentIndex).getEmp_name());
-            emplSalaryText_View.setText(Double.toString(all_employee.get(currentIndex).getEmp_salary()));
-        }
-        });
-
-        //Get the view of calculate button
-        CalculateTax=(Button) findViewById(R.id.employeeTaxButton);
-        CalculateTax.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                Taxt_View.setText("Total tax: "+Double.toString(all_employee.get(currentIndex).calculateTotalTax()));
-            }
-        });
     }
 
     @Override
-    public void onSaveInstanceState(Bundle savedInstanceState)
-    {
-        super.onSaveInstanceState(savedInstanceState);
-        Log.d(TAG, "onSaveInstanceState: called");
-        savedInstanceState.putInt(KEY_INDEX,currentIndex);
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_employee, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id =item.getItemId();
+        Intent intent;
+
+        if(id == R.id.Emloyeeoptionitem1)
+        {
+
+            String location ="";
+            int index = MainFragment.getCurrentIndex();
+            Employee temp = MainFragment.all_employee.get(index);
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference();
+            HashMap hm= new HashMap<>();
+            hm.put(""+temp.getEmp_id(),temp);
+            databaseRef.child("Employee").updateChildren(hm);
+            Toast.makeText(MainActivity.this, "Added to firebase", Toast.LENGTH_SHORT).show();
+        } else if (id==R.id.Emloyeeoptionitem2) {
+
+            int index = MainFragment.getCurrentIndex();
+            Employee temp = MainFragment.all_employee.get(index);
+            DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference().child("Employee");
+            databaseRef.child(String.valueOf(temp.getEmp_id())).removeValue();
+            Toast.makeText(MainActivity.this, "Removed from firebase", Toast.LENGTH_SHORT).show();
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 }
